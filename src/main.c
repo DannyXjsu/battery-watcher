@@ -27,7 +27,7 @@
 // ##### MAIN #####
 int main(int argc, char **argv){
 	// ARGUMENTS
-	if(!set_flags(argc, argv))
+	if(!resolve_arguments(argc, argv))
 		return 0;
 
 	// PROGRAM
@@ -49,7 +49,7 @@ int main(int argc, char **argv){
 	// If verbose; print info, otherwise get to looping
 	verbose_printf("\033[1,0mPROGRAM STARTING WITH VERBOSE FLAG SET\033[0m\n");
 	verbose_printf("%s:\t%s\n", nameof(acpi.status_file), acpi.status_file);
-	if (is_flag_set(flag_lite))
+	if (is_flag_set(LITE))
 		verbose_printf("Lite mode is enabled\n");
 	verbose_printf("\nLOG START:\n");
 
@@ -60,7 +60,7 @@ int main(int argc, char **argv){
 		if (errno != 0) return errno; // Smooth brain error detection
 
 		// If no change happened, wait and go to next loop iteration
-		if (acpi_status_previous == acpi.status && !is_flag_set(flag_lite)){
+		if (acpi_status_previous == acpi.status && !is_flag_set(LITE)){
 			//verbose_printf("No state change detected\n", argv[0]); // This bombs log files lol
 			sleep(SLEEP_TIME);
 			continue;
@@ -70,16 +70,22 @@ int main(int argc, char **argv){
 		switch(acpi.status){
 			case PLUGGED:
 				verbose_printf("AC was plugged\n");
+				for (size_t i = 0; i < programs_quota_plug; i++){
+					exec_program(input_programs_plug[i]);
+				}
 				continue;
 				break;
 			case UNPLUGGED:
 				verbose_printf("AC was unplugged\n");
+				for (size_t i = 0; i < programs_quota_unplug; i++){
+					exec_program(input_programs_unplug[i]);
+				}
 				continue;
 				break;
 			default:
 		}		
 
-	} while (!is_flag_set(flag_lite));
+	} while (!is_flag_set(LITE));
 
 	return 0;
 }

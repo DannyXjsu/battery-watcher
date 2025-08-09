@@ -1,50 +1,72 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 #include "battery-watcher.h"
 
-const char *AC_PATH = "/sys/class/power_supply/AC0";
-// This is the file that stores the status of the AC, the "online" provives a 0 or a 1
-const char *AC_STATUS_FILE = "online";
+char input_programs_plug[MAXIMUM_INPUT_PROGRAMS/2][FILENAME_MAX/2];
+char input_programs_unplug[MAXIMUM_INPUT_PROGRAMS/2][FILENAME_MAX/2];
+unsigned int programs_quota_plug = 0;
+unsigned int programs_quota_unplug = 0;
 
-unsigned int flags = 0;
-const unsigned int flag_verbose	= 	(1<<0);	// 1
-const unsigned int flag_lite	=	(1<<1);	// 2
+Flags flags = 0;
 
 inline void print_help(bool unknown, char *arg)
 {
-	printf("usage: battery-watcher [-h] [-l] [-v] [-m]\n\n");
+	printf("usage: battery-watcher [-h] [-l] [-v] [-i executable] [-o executable]\n\n");
 	if (unknown){
 		printf("battery-watcher: error: Unknown arguments: %s\n", arg);
 	} else {
 		printf("Reads AC status and detects state changes..\n\n");
 		printf("option:\n");
+        printf("\t-i\tRelative path to file that gets executed when AC plugged.\n");
+        printf("\t-o\tRelative path to file that gets executed when AC unplugged.\n");
 		printf("\t-h\tShow this help message and exit.\n");
-		printf("\t-l\tEnables lite mode - run once and play sound depending of current AC state.\n");
-		printf("\t-m\tMute - skip playing audio when the state changes.\n");
+		printf("\t-l\tEnables lite mode - run once and execute file depending of current AC state.\n");
 		printf("\t-v\tEnable verbose output - prints current state every loop.\n");
 	}
 }
 
-inline bool set_flags(int argc, char **argv){
+inline bool resolve_arguments(int argc, char **argv){
 	for (size_t i = 1; i < argc; i++){
 		// If argument found
 		if (argv[i][0] == '-')
 			switch(argv[i][1]){
+                case 'i':
+                    if (i+1 >= argc){
+                        printf("No input file was given\n");
+                        print_help(false, "i");
+                        return false;
+                    }
+                    strcpy(input_programs_plug[programs_quota_plug], argv[i+1]);
+                    programs_quota_plug++;
+                    break;
+                case 'o':
+                    if (i+1 > argc){
+                        printf("No input file was given\n");
+                        print_help(false, "o");
+                        return false;
+                    }
+                    strcpy(input_programs_unplug[programs_quota_unplug], argv[i+1]);
+                    programs_quota_unplug++;
+                    break;
 				case 'v':
-					flags |= flag_verbose;
+					flags |= VERBOSE;
 					break;
 				case 'l':
-					flags |= flag_lite;
+					flags |= LITE;
 					break;
 				case 'h':
-					print_help(0, NULL);
+					print_help(false, NULL);
 					return false;
 					break;
 				default:
-					print_help(1, argv[i]);
+					print_help(true, argv[i]);
 					return false;
 					break;
 			}
@@ -57,7 +79,7 @@ inline bool is_flag_set(unsigned int flag){
 }
 
 inline int verbose_printf(const char *format, ...){
-	if(!is_flag_set(flag_verbose))
+	if(!is_flag_set(VERBOSE))
 		return 0;
 	size_t len = 0;
 	va_list argv;
@@ -100,4 +122,52 @@ inline int verbose_printf(const char *format, ...){
 	}
 	va_end(argv);
 	return len;
+}
+
+inline int exec_program(const char* path, ...){
+    size_t len = 0;
+	va_list argv;
+	va_start(argv, path);
+    pid_t pid = fork();
+
+	if (pid < 0) {
+		// Fork failed
+		perror("Unable to fork process");
+		return errno;
+	}
+
+	if (pid == 0) {
+		// In child process
+
+		// Suppress stdout/stderr:
+		//freopen("/dev/null", "w", stdout);
+		//freopen("/dev/null", "w", stderr);
+
+        // Don't know if this is the best way of getting arguments
+        // FIXME: God this hurts my brain
+        // FODASEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+        /*
+        char args[strlen(path)];
+		const char *str = path;
+        for (size_t i = 0; path[i] != '\0'; i++){
+            str = va_arg(argv, const char*);
+            snprintf(args, strlen(str), "%s ", str);
+            printf("Executing: %s %s\n", path, str);
+        }
+        */
+        //char * const c_args[sizeof(*args)];
+        //str = NULL;
+
+        verbose_printf("Executing: %s\n", path);
+        static char *args[]={NULL};
+        int err = execv(path, args);
+        if (err) return err;
+
+		// If exec fails:
+		perror("Unable to execute program");
+		exit(EXIT_FAILURE);
+	} else {
+		// parent: wait for child to finish
+		waitpid(pid, NULL, 0);
+	}
 }

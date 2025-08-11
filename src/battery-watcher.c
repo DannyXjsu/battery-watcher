@@ -22,7 +22,7 @@ inline void print_help(bool unknown, char *arg)
 	if (unknown){
 		printf("battery-watcher: error: Unknown arguments: %s\n", arg);
 	} else {
-		printf("Reads AC status and detects state changes..\n\n");
+		printf("Reads AC status and detects state changes.\n\n");
 		printf("option:\n");
         printf("\t-i\tRelative path to file that gets executed when AC plugged.\n");
         printf("\t-o\tRelative path to file that gets executed when AC unplugged.\n");

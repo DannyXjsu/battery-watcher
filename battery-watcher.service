@@ -2,7 +2,7 @@
 Description=Execute files depending on changes in ACPI power status.
 
 [Service]
-ExecStart=/opt/battery-watcher/battery-watcher
+ExecStart=/opt/battery-watcher/battery-watcher -v -i /opt/battery-watcher/sound_plug.sh -o /opt/battery-watcher/sound_unplug.sh
 
 [Install]
 WantedBy=default.target

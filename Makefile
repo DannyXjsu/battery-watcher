@@ -6,11 +6,19 @@ CXXFLAGS := -O2
 DBGFLAGS := -g
 COBJFLAGS := $(CFLAGS) -c
 
+SERVICE_FILE := battery-watcher.service
+SERVICE_PATH := $(XDG_CONFIG_HOME)/systemd/user/
+
+SH_SOUND_PLUG := sound_plug.sh
+SH_SOUND_UNPLUG := sound_unplug.sh
+
 # path macros
 BIN_PATH := bin
 OBJ_PATH := obj
 SRC_PATH := src
 DBG_PATH := debug
+
+PREFIX_INSTALL := /opt
 
 # compile macros
 TARGET_NAME := battery-watcher
@@ -58,6 +66,30 @@ all: $(TARGET)
 
 .PHONY: debug
 debug: $(TARGET_DEBUG)
+
+.PHONY: install-service
+install-service:
+	@cp -v $(SERVICE_FILE) $(SERVICE_PATH)
+	@systemctl --user daemon-reload
+
+.PHONY: uninstall-service
+uninstall-service:
+	@rm -vri $(SERVICE_PATH)/$(SERVICE_FILE)
+
+.PHONY: enable-service
+enable-service:
+	@systemctl --user enable --now battery-watcher
+
+.PHONY: install
+install:
+	@mkdir -vp $(PREFIX_INSTALL)/$(TARGET_NAME)
+	@install -v -m 755 $(TARGET) $(PREFIX_INSTALL)/$(TARGET_NAME)
+	@install -v -m 755 $(SH_SOUND_PLUG) $(PREFIX_INSTALL)/$(TARGET_NAME)
+	@install -v -m 755 $(SH_SOUND_UNPLUG) $(PREFIX_INSTALL)/$(TARGET_NAME)
+
+.PHONY: uninstall
+uninstall:
+	@rm -vri $(PREFIX_INSTALL)/$(TARGET_NAME)
 
 .PHONY: clean
 clean:

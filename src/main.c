@@ -26,19 +26,18 @@
 
 // ##### MAIN #####
 int main(int argc, char **argv){
+	// init has to come first
+	acpi_init();
+
 	// ARGUMENTS
 	if(!resolve_arguments(argc, argv))
 		return 0;
 
-	// PROGRAM
-	ACPI acpi;
-	acpi.status = UNPLUGGED;
-	// This holds the status number in integer, gets updated only when there's a change in status
-	ACStatus acpi_status_previous = PLUGGED;
 
 	// CONVERSIONS
-	// Convert the AC define paths into a single string
-	snprintf(acpi.status_file, sizeof(acpi.status_file), "%s/%s", AC_PATH, AC_STATUS_FILE);
+	// Convert the AC define paths into a single string IF not set already with an argument
+	if (acpi.status_file[0] == '\0')
+		snprintf(acpi.status_file, sizeof(acpi.status_file), "%s/%s", AC_PATH, AC_STATUS_FILE);
 
 	// Convert the sounds define into a single string
 
@@ -47,7 +46,7 @@ int main(int argc, char **argv){
 	if (errno != 0) return errno;
 
 	// If verbose; print info, otherwise get to looping
-	verbose_printf("\033[1,0mPROGRAM STARTING WITH VERBOSE FLAG SET\033[0m\n");
+	verbose_printf("PROGRAM STARTING WITH VERBOSE FLAG SET\n");
 	verbose_printf("%s:\t%s\n", nameof(acpi.status_file), acpi.status_file);
 	if (is_flag_set(LITE))
 		verbose_printf("Lite mode is enabled\n");
@@ -71,14 +70,16 @@ int main(int argc, char **argv){
 			case PLUGGED:
 				verbose_printf("AC was plugged\n");
 				for (size_t i = 0; i < programs_quota_plug; i++){
-					exec_program(input_programs_plug[i]);
+					int err = exec_program(input_programs_plug[i]);
+					if (err) return err;
 				}
 				continue;
 				break;
 			case UNPLUGGED:
 				verbose_printf("AC was unplugged\n");
 				for (size_t i = 0; i < programs_quota_unplug; i++){
-					exec_program(input_programs_unplug[i]);
+					int err = exec_program(input_programs_unplug[i]);
+					if (err) return err;
 				}
 				continue;
 				break;

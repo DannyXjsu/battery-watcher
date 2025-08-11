@@ -18,6 +18,14 @@ typedef struct{
 	ACStatus status;
 }ACPI;
 
+extern ACPI acpi;
+extern ACStatus acpi_status_previous;
+
+/**
+ * @brief Initializes ACPI stuff
+ * 
+ */
+extern void acpi_init();
 
 /**
  * @brief Open file and only read the first character

@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 
+#include "acpi-helper.h"
 #include "battery-watcher.h"
 
 char input_programs_plug[MAXIMUM_INPUT_PROGRAMS/2][FILENAME_MAX/2];
@@ -16,6 +17,7 @@ unsigned int programs_quota_unplug = 0;
 
 Flags flags = 0;
 
+// TODO: print help for a single argument
 inline void print_help(bool unknown, char *arg)
 {
 	printf("usage: battery-watcher [-h] [-l] [-v] [-i executable] [-o executable]\n\n");
@@ -24,9 +26,10 @@ inline void print_help(bool unknown, char *arg)
 	} else {
 		printf("Reads AC status and detects state changes.\n\n");
 		printf("option:\n");
+		printf("\t-h\tShow this help message and exit.\n");
         printf("\t-i\tRelative path to file that gets executed when AC plugged.\n");
         printf("\t-o\tRelative path to file that gets executed when AC unplugged.\n");
-		printf("\t-h\tShow this help message and exit.\n");
+		printf("\t-b\tAbsolute path to ACPI battery status file");
 		printf("\t-l\tEnables lite mode - run once and execute file depending of current AC state.\n");
 		printf("\t-v\tEnable verbose output - prints current state every loop.\n");
 	}
@@ -37,9 +40,10 @@ inline bool resolve_arguments(int argc, char **argv){
 		// If argument found
 		if (argv[i][0] == '-')
 			switch(argv[i][1]){
+				// I am fully aware that my code is unsafe — i don't care
                 case 'i':
                     if (i+1 >= argc){
-                        printf("No input file was given\n");
+                        printf("No input file was given to execute (-i)\n");
                         print_help(false, "i");
                         return false;
                     }
@@ -48,13 +52,21 @@ inline bool resolve_arguments(int argc, char **argv){
                     break;
                 case 'o':
                     if (i+1 > argc){
-                        printf("No input file was given\n");
+                        printf("No input file was given to execute (-o)\n");
                         print_help(false, "o");
                         return false;
                     }
                     strcpy(input_programs_unplug[programs_quota_unplug], argv[i+1]);
                     programs_quota_unplug++;
                     break;
+				case 'b':
+					if (i+1 > argc){
+						printf("No input file was given for ACPI battery status");
+						print_help(false, "b");
+						return false;
+					}
+					strcpy(acpi.status_file, argv[i+1]);
+					break;
 				case 'v':
 					flags |= VERBOSE;
 					break;
@@ -161,11 +173,11 @@ inline int exec_program(const char* path, ...){
         verbose_printf("Executing: %s\n", path);
         static char *args[]={NULL};
         int err = execv(path, args);
-        if (err) return err;
 
 		// If exec fails:
 		perror("Unable to execute program");
 		exit(EXIT_FAILURE);
+        if (err) return err;
 	} else {
 		// parent: wait for child to finish
 		waitpid(pid, NULL, 0);

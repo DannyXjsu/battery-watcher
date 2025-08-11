@@ -21,8 +21,9 @@ extern unsigned int programs_quota_unplug;
 typedef enum EFlags{
     INPUT_PLUGGED = (1<<0), // @brief Inputs a file to execute when power supply is plugged
     INPUT_UNPLUGGED = (1<<1), // @brief Inputs a file to execute when power supply is unplugged
-	VERBOSE = (1<<2), // @brief Prints information to the screen
-	LITE = (1<<3), // @brief Run a single loop iteration
+    INPUT_ACTATUS = (1<<2), // @brief Inputs a file to execute when power supply is unplugged
+	VERBOSE = (1<<3), // @brief Prints information to the screen
+	LITE = (1<<4), // @brief Run a single loop iteration
 }Flags;
 /** @brief Global flags variable */
 extern Flags flags;

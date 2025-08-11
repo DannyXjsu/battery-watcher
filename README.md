@@ -41,7 +41,12 @@ $ systemctl --user daemon-reload
 # Enable it 
 $ systemctl --user enable --now battery-watcher
 ```
-
+#### Using Make
+Makefile can also install and enable the service
+```bash
+$ make install-service # cp battery-watcher.service $XDG_CONFIG_HOME/systemd/user  && systemctl --user daemon-reload
+$ make enable-serice # systemctl --user enable --now battery-watcher
+```
 
 ## Configuration
 Change the necessary defines in the source file.
